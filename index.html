@@ -12,12 +12,13 @@
     .hint{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:#666; text-align:center; padding:18px; font-weight:600; pointer-events:none; }
     .panel{ border:1px solid rgba(0,0,0,.12); border-radius:18px; padding:12px; }
     label{ display:block; font-size:13px; font-weight:700; margin:10px 0; }
-    input[type="text"], textarea{ width:100%; box-sizing:border-box; margin-top:6px; padding:10px 12px; border-radius:14px; border:1px solid rgba(0,0,0,.18); font-size:14px; }
+    textarea{ width:100%; box-sizing:border-box; margin-top:6px; padding:10px 12px; border-radius:14px; border:1px solid rgba(0,0,0,.18); font-size:14px; }
     textarea{ height:150px; resize:vertical; }
-    .row{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .row{ display:grid; grid-template-columns:1fr; gap:10px; }
     button{ width:100%; padding:12px; border-radius:14px; border:0; font-weight:800; cursor:pointer; }
     button:disabled{ opacity:.5; cursor:not-allowed; }
     .note{ margin-top:10px; font-size:12px; opacity:.75; line-height:1.35; }
+    .btnRow{ display:grid; grid-template-columns: 1fr 1fr; gap:10px; }
   </style>
 </head>
 <body>
@@ -34,12 +35,7 @@
       </label>
 
       <label>
-        Title
-        <input id="title" type="text" value="my rotation" />
-      </label>
-
-      <label>
-        Lines (one per line)
+        Lines (one per line — commas also work)
         <textarea id="lines" spellcheck="false">wake up
 boat
 write
@@ -55,14 +51,12 @@ sleep</textarea>
           Text size
           <input id="size" type="range" min="40" max="120" value="78" />
         </label>
-
-        <label>
-          JPEG quality
-          <input id="q" type="range" min="60" max="95" value="90" />
-        </label>
       </div>
 
-      <button id="jpg" disabled>Export JPEG</button>
+      <div class="btnRow">
+        <button id="exportBtn" disabled>Export</button>
+        <button id="exportFrameBtn" disabled>Export Frame (JPEG)</button>
+      </div>
 
       <div class="note" id="note"></div>
     </div>
@@ -77,14 +71,16 @@ sleep</textarea>
       const ctx=canvas.getContext("2d");
       const hint=document.getElementById("hint");
       const file=document.getElementById("file");
-      const title=document.getElementById("title");
       const lines=document.getElementById("lines");
       const size=document.getElementById("size");
-      const q=document.getElementById("q");
-      const jpg=document.getElementById("jpg");
+      const exportBtn=document.getElementById("exportBtn");
+      const exportFrameBtn=document.getElementById("exportFrameBtn");
       const note=document.getElementById("note");
       const video=document.getElementById("v");
+
       const img=new Image();
+      const logo=new Image();
+      logo.src = "./logo.jpg"; // <-- upload your logo as logo.jpg (or change this filename)
 
       let mode=null; // "image" | "video"
       let ready=false;
@@ -97,11 +93,43 @@ sleep</textarea>
         ctx.drawImage(source, sx, sy, cw, ch, 0, 0, W, H);
       }
 
+      function parseLines(raw){
+        // Handles:
+        // - normal newlines
+        // - pasted comma-separated lists
+        // - Windows CRLF
+        let t = (raw || "").replace(/\r/g, "").trim();
+        if(!t) return [];
+
+        // If user pasted comma-separated text on one line, convert commas to newlines
+        if(!t.includes("\n") && t.includes(",")) {
+          t = t.split(",").map(s => s.trim()).filter(Boolean).join("\n");
+        }
+
+        // Split on newlines (after comma normalization)
+        return t.split("\n").map(s => s.trim()).filter(Boolean);
+      }
+
+      function drawLogo(){
+        if(!logo.complete || !logo.naturalWidth) return;
+
+        // Place logo near top center like your sample.
+        // Scale to ~70% width max.
+        const maxW = W * 0.78;
+        const scale = Math.min(maxW / logo.naturalWidth, 1);
+        const drawW = logo.naturalWidth * scale;
+        const drawH = logo.naturalHeight * scale;
+
+        const x = (W - drawW) / 2;
+        const y = H * 0.09; // tweak if needed
+        ctx.drawImage(logo, x, y, drawW, drawH);
+      }
+
       function drawText(){
-        const t=(title.value||"").trim();
-        const ls=(lines.value||"").split("\\n").map(s=>s.trim()).filter(Boolean);
+        const ls=parseLines(lines.value);
         const fs=Number(size.value);
 
+        // subtle overlay to help white text pop
         ctx.fillStyle="rgba(0,0,0,0.12)";
         ctx.fillRect(0,0,W,H);
 
@@ -111,19 +139,16 @@ sleep</textarea>
         ctx.shadowOffsetX=0;
         ctx.shadowOffsetY=6;
 
-        if(t){
-          ctx.textAlign="center";
-          ctx.font=`800 ${Math.round(fs*0.75)}px system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial`;
-          ctx.fillText(t, W*0.53, H*0.14);
-        }
-
+        // Left column list (vertical)
         ctx.textAlign="left";
         ctx.font=`900 ${fs}px system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial`;
         const leftX=W*0.12;
-        const startY=H*0.38;
+        const startY=H*0.40;
         const lh=Math.round(fs*1.05);
+
         ls.forEach((line,i)=>ctx.fillText(line,leftX,startY+i*lh));
 
+        // reset shadow
         ctx.shadowColor="transparent";
         ctx.shadowBlur=0;
         ctx.shadowOffsetX=0;
@@ -137,13 +162,16 @@ sleep</textarea>
           ctx.fillRect(0,0,W,H);
           return;
         }
+
         if(mode==="image"){
           cover(img, img.width, img.height);
           drawText();
+          drawLogo();
         } else if(mode==="video"){
           if(video.videoWidth && video.videoHeight){
             cover(video, video.videoWidth, video.videoHeight);
             drawText();
+            drawLogo();
           }
         }
       }
@@ -159,7 +187,16 @@ sleep</textarea>
       }
 
       function setButtons(){
-        jpg.disabled=!ready;
+        exportBtn.disabled=!ready;
+        exportFrameBtn.disabled=!ready;
+
+        if(!ready) return;
+
+        if(mode === "image"){
+          exportBtn.textContent = "Export Photo (JPEG)";
+        } else {
+          exportBtn.textContent = "Export Video";
+        }
       }
 
       file.addEventListener("change", async (e) => {
@@ -180,7 +217,7 @@ sleep</textarea>
             ready=true;
             renderOnce();
             setButtons();
-            note.textContent="Photo loaded. Export as JPEG.";
+            note.textContent="Photo loaded. Export will download a JPEG.";
             URL.revokeObjectURL(url);
           };
           img.src=url;
@@ -192,7 +229,11 @@ sleep</textarea>
             try{ await video.play(); }catch(_){}
             startLoop();
             setButtons();
-            note.textContent="Video loaded. Export grabs the current frame as a JPEG (reliable on iPhone).";
+
+            const canRecord = typeof MediaRecorder !== "undefined";
+            note.textContent = canRecord
+              ? "Video loaded. Export Video works in some browsers (usually desktop Chrome). On iPhone Safari, use Export Frame (JPEG) if video export isn’t supported."
+              : "Video loaded. This browser can’t export video. Use Export Frame (JPEG).";
           };
           video.src=url;
           video.load();
@@ -204,16 +245,76 @@ sleep</textarea>
         setButtons();
       });
 
-      [title, lines, size].forEach(el=>el.addEventListener("input", ()=>{ if(mode==="image") renderOnce(); }));
+      // If user edits text, image mode rerenders immediately; video mode rerenders via loop
+      [lines, size].forEach(el=>el.addEventListener("input", ()=>{ if(mode==="image") renderOnce(); }));
 
-      jpg.addEventListener("click", ()=>{
+      // Export JPEG always works (photo OR current video frame)
+      exportFrameBtn.addEventListener("click", ()=>{
         if(!ready) return;
         renderOnce();
-        const quality=Number(q.value)/100;
         const a=document.createElement("a");
         a.download="on-rotation.jpg";
-        a.href=canvas.toDataURL("image/jpeg", quality);
+        a.href=canvas.toDataURL("image/jpeg", 0.92);
         a.click();
+      });
+
+      // Export action:
+      // - Photo background => JPEG
+      // - Video background => attempt to record canvas stream (webm)
+      exportBtn.addEventListener("click", async ()=>{
+        if(!ready) return;
+
+        if(mode === "image"){
+          renderOnce();
+          const a=document.createElement("a");
+          a.download="on-rotation.jpg";
+          a.href=canvas.toDataURL("image/jpeg", 0.92);
+          a.click();
+          return;
+        }
+
+        // Video export (best-effort)
+        if(typeof MediaRecorder === "undefined"){
+          alert("Video export isn’t supported in this browser. Use Export Frame (JPEG).");
+          return;
+        }
+
+        // Record canvas for a fixed duration (simple + reliable)
+        // If you want “record full video length”, we can add a Start/Stop UI next.
+        const seconds = 5;
+
+        const stream = canvas.captureStream(30);
+        const preferred = [
+          "video/webm;codecs=vp9",
+          "video/webm;codecs=vp8",
+          "video/webm"
+        ];
+        let opts = {};
+        for(const mt of preferred){
+          if(MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(mt)){
+            opts.mimeType = mt;
+            break;
+          }
+        }
+
+        const rec = new MediaRecorder(stream, opts);
+        const chunks = [];
+        rec.ondataavailable = (ev) => { if(ev.data && ev.data.size) chunks.push(ev.data); };
+
+        rec.start();
+        setTimeout(() => rec.stop(), seconds * 1000);
+
+        rec.onstop = () => {
+          const blob = new Blob(chunks, { type: rec.mimeType || "video/webm" });
+          const url = URL.createObjectURL(blob);
+
+          const a=document.createElement("a");
+          a.download="on-rotation.webm";
+          a.href=url;
+          a.click();
+
+          setTimeout(() => URL.revokeObjectURL(url), 5000);
+        };
       });
 
       renderOnce();
