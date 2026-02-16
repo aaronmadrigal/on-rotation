@@ -118,7 +118,7 @@ sleep</textarea>
     </label>
 
     <label>
-      Color Style
+      Choose yo flavor!!!
       <select id="colorSelect">
         <option value="lime">Lime Green</option>
         <option value="orange">Orange</option>
@@ -157,12 +157,12 @@ sleep</textarea>
   const logo = new Image();
 
   const THEMES = {
-    lime:       { text:"#b7ff00", logo:"./logo-lime-green.png" },
-    orange:     { text:"#ff9f0a", logo:"./logo-orange.png" },
-    yellow:     { text:"#ffd60a", logo:"./logo-yellow.png" },
-    blue:       { text:"#0a84ff", logo:"./logo-blue.png" },
-    whitegreen: { text:"#ffffff", logo:"./logo-white-green.png" },
-    silver:     { text:"#d1d1d6", logo:"./logo-silver.png" }
+    lime:       { logo:"./logo-lime-green.png" },
+    orange:     { logo:"./logo-orange.png" },
+    yellow:     { logo:"./logo-yellow.png" },
+    blue:       { logo:"./logo-blue.png" },
+    whitegreen: { logo:"./logo-white-green.png" },
+    silver:     { logo:"./logo-silver.png" }
   };
 
   function applyTheme(){
@@ -200,21 +200,20 @@ sleep</textarea>
   function drawText(){
     const lines = parseLines(linesInput.value);
     const fontSize = Number(sizeInput.value);
-    const theme = THEMES[colorSelect.value];
 
-    ctx.fillStyle = theme.text;
+    ctx.fillStyle = "#ffffff"; // ALWAYS WHITE
     ctx.textAlign = "left";
     ctx.font = `700 ${fontSize}px Quicksand`;
 
     const leftX = W * 0.12;
     const startY = H * 0.40;
-    const lh = Math.round(fontSize * 1.06); // condensed spacing
+    const lh = Math.round(fontSize * 0.85);
 
     lines.forEach((line, i) => {
       ctx.fillText(line, leftX, startY + i * lh);
     });
   }
-
+  
   function render(){
     ctx.clearRect(0,0,W,H);
     drawText();
