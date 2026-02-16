@@ -184,11 +184,7 @@ sleep</textarea>
 
     ctx.fillStyle = "white";
 
-    // Soft shadow like your reference
-    ctx.shadowColor = "rgba(0,0,0,0.35)";
-    ctx.shadowBlur = 10;
-    ctx.shadowOffsetX = 0;
-    ctx.shadowOffsetY = 6;
+
 
     // Quicksand Bold (700)
     ctx.textAlign = "left";
@@ -196,7 +192,7 @@ sleep</textarea>
 
     const leftX  = W * 0.12;
     const startY = H * 0.40;
-    const lh     = Math.round(fontSize * 1.12); // a bit airier for Quicksand
+    const lh     = Math.round(fontSize * 1.03); // a bit airier for Quicksand
 
     lines.forEach((line, i) => {
       ctx.fillText(line, leftX, startY + i * lh);
