@@ -9,7 +9,13 @@
   <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@700&display=swap" rel="stylesheet">
 
   <style>
-    body{ margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; background:#fff; }
+    /* DARK APP UI */
+    body{
+      margin:0;
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
+      background:#1c1c1e;   /* iOS dark */
+      color:#f2f2f7;
+    }
 
     .app{
       max-width:520px;
@@ -20,27 +26,29 @@
     }
 
     .card{
-      border:1px solid rgba(0,0,0,.12);
+      border:1px solid rgba(255,255,255,.08);
       border-radius:18px;
       overflow:hidden;
-      background:#f7f7f7;
+      background:#2c2c2e;
     }
 
+    /* DARK checkerboard to indicate transparency */
     canvas{
       width:100%;
       height:auto;
       display:block;
       background:
-        linear-gradient(45deg,#eee 25%,transparent 25%) 0 0/20px 20px,
-        linear-gradient(-45deg,#eee 25%,transparent 25%) 0 0/20px 20px,
-        linear-gradient(45deg,transparent 75%,#eee 75%) 0 0/20px 20px,
-        linear-gradient(-45deg,transparent 75%,#eee 75%) 0 0/20px 20px;
+        linear-gradient(45deg,#3a3a3c 25%,transparent 25%) 0 0/20px 20px,
+        linear-gradient(-45deg,#3a3a3c 25%,transparent 25%) 0 0/20px 20px,
+        linear-gradient(45deg,transparent 75%,#3a3a3c 75%) 0 0/20px 20px,
+        linear-gradient(-45deg,transparent 75%,#3a3a3c 75%) 0 0/20px 20px;
     }
 
     .panel{
-      border:1px solid rgba(0,0,0,.12);
+      border:1px solid rgba(255,255,255,.08);
       border-radius:18px;
       padding:12px;
+      background:#2c2c2e;
     }
 
     label{
@@ -48,6 +56,7 @@
       font-size:13px;
       font-weight:700;
       margin:10px 0;
+      color:#f2f2f7;
     }
 
     textarea{
@@ -56,7 +65,9 @@
       margin-top:6px;
       padding:10px 12px;
       border-radius:14px;
-      border:1px solid rgba(0,0,0,.18);
+      border:1px solid rgba(255,255,255,.12);
+      background:#1c1c1e;
+      color:#ffffff;
       font-size:14px;
       height:170px;
       resize:vertical;
@@ -67,7 +78,9 @@
       margin-top:6px;
       padding:10px 12px;
       border-radius:14px;
-      border:1px solid rgba(0,0,0,.18);
+      border:1px solid rgba(255,255,255,.12);
+      background:#1c1c1e;
+      color:#ffffff;
       font-size:14px;
       box-sizing:border-box;
     }
@@ -80,12 +93,18 @@
       font-weight:800;
       cursor:pointer;
       margin-top:10px;
+      background:#3a3a3c;
+      color:#ffffff;
+    }
+
+    button:hover{
+      background:#48484a;
     }
 
     .note{
       margin-top:10px;
       font-size:12px;
-      opacity:.75;
+      opacity:.7;
       line-height:1.35;
     }
   </style>
@@ -95,6 +114,7 @@
 <div class="app">
 
   <div class="card">
+    <!-- Fixed IG Story overlay size -->
     <canvas id="c" width="1080" height="1920"></canvas>
   </div>
 
@@ -132,9 +152,9 @@ sleep</textarea>
     <button id="exportBtn">Export Overlay (PNG)</button>
 
     <div class="note">
-      Exports transparent PNG (1080×1920)
+      Exports a transparent PNG (1080×1920) for Instagram Stories.
       <br><br>
-      iPhone: Tap Export → Long-press → Save to Photos → Add to Story BRUHHH
+      iPhone: Tap Export → Long-press the image → Save to Photos → Add to your Story.
     </div>
 
   </div>
@@ -149,14 +169,15 @@ sleep</textarea>
   const canvas = document.getElementById("c");
   const ctx = canvas.getContext("2d");
 
-  const linesInput = document.getElementById("lines");
-  const sizeInput = document.getElementById("size");
-  const exportBtn = document.getElementById("exportBtn");
-  const colorSelect = document.getElementById("colorSelect");
+  const linesInput  = document.getElementById("lines");
+  const sizeInput   = document.getElementById("size");
+  const exportBtn   = document.getElementById("exportBtn");
+  const flavorSelect = document.getElementById("colorSelect");
 
   const logo = new Image();
 
-  const THEMES = {
+  // Logo-only flavors (text stays white)
+  const FLAVORS = {
     lime:       { logo:"./logo-lime-green.png" },
     orange:     { logo:"./logo-orange.png" },
     yellow:     { logo:"./logo-yellow.png" },
@@ -165,9 +186,9 @@ sleep</textarea>
     silver:     { logo:"./logo-silver.png" }
   };
 
-  function applyTheme(){
-    const t = THEMES[colorSelect.value];
-    logo.src = t.logo;
+  function applyFlavor(){
+    const f = FLAVORS[flavorSelect.value] || FLAVORS.lime;
+    logo.src = f.logo;
     render();
   }
 
@@ -175,6 +196,7 @@ sleep</textarea>
     let t = (raw || "").replace(/\r/g,"").trim();
     if(!t) return [];
 
+    // If user pastes comma-separated items on one line, split them
     if(!t.includes("\n") && t.includes(",")){
       t = t.split(",").map(s => s.trim()).filter(Boolean).join("\n");
     }
@@ -185,6 +207,7 @@ sleep</textarea>
   function drawLogo(){
     if(!logo.complete || !logo.naturalWidth) return;
 
+    // Logo placement like your reference
     const maxW = W * 0.62;
     const scale = Math.min(maxW / logo.naturalWidth, 1);
 
@@ -205,26 +228,31 @@ sleep</textarea>
     ctx.textAlign = "left";
     ctx.font = `700 ${fontSize}px Quicksand`;
 
-    const leftX = W * 0.12;
+    const leftX  = W * 0.12;
     const startY = H * 0.40;
+
+    // Tight spacing (you had 0.85; keep it tight)
     const lh = Math.round(fontSize * 0.85);
 
     lines.forEach((line, i) => {
       ctx.fillText(line, leftX, startY + i * lh);
     });
   }
-  
+
   function render(){
+    // Transparent overlay
     ctx.clearRect(0,0,W,H);
     drawText();
     drawLogo();
   }
 
+  // Live updates
   linesInput.addEventListener("input", render);
   sizeInput.addEventListener("input", render);
-  colorSelect.addEventListener("change", applyTheme);
+  flavorSelect.addEventListener("change", applyFlavor);
   logo.onload = render;
 
+  // Export transparent PNG and open it for iPhone long-press save
   exportBtn.addEventListener("click", () => {
     render();
     const pngUrl = canvas.toDataURL("image/png");
@@ -232,13 +260,21 @@ sleep</textarea>
     const win = window.open();
     if(win){
       win.document.write('<meta name="viewport" content="width=device-width,initial-scale=1" />');
-      win.document.write('<img src="'+pngUrl+'" style="width:100%">');
+      win.document.write('<img src="'+pngUrl+'" style="width:100%;height:auto;display:block;">');
+      win.document.write('<p style="font-family:system-ui;margin:12px;opacity:.75;line-height:1.35;color:#111;">Long-press → Save to Photos</p>');
+    } else {
+      // Popup blocked: fallback to download
+      const a = document.createElement("a");
+      a.download = "on-rotation-overlay.png";
+      a.href = pngUrl;
+      a.click();
     }
   });
 
   async function init(){
+    // Ensure Quicksand is loaded before first draw (canvas consistency)
     try { await document.fonts.load('700 80px "Quicksand"'); } catch(e){}
-    applyTheme();
+    applyFlavor();
   }
 
   init();
