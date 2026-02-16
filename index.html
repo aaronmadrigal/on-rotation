@@ -3,40 +3,106 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>On Rotation Generator</title>
+  <title>On Rotation Overlay</title>
+
+  <!-- Quicksand Bold (700) -->
+  <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@700&display=swap" rel="stylesheet">
+
   <style>
-    body{ margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; background:#fff; }
-    .app{ max-width:520px; margin:0 auto; padding:12px; display:grid; gap:12px; }
-    .card{ border:1px solid rgba(0,0,0,.12); border-radius:18px; overflow:hidden; background:#f3f3f3; position:relative; }
-    canvas{ width:100%; height:auto; display:block; }
-    .hint{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:#666; text-align:center; padding:18px; font-weight:600; pointer-events:none; }
-    .panel{ border:1px solid rgba(0,0,0,.12); border-radius:18px; padding:12px; }
-    label{ display:block; font-size:13px; font-weight:700; margin:10px 0; }
-    textarea{ width:100%; box-sizing:border-box; margin-top:6px; padding:10px 12px; border-radius:14px; border:1px solid rgba(0,0,0,.18); font-size:14px; }
-    textarea{ height:150px; resize:vertical; }
-    .row{ display:grid; grid-template-columns:1fr; gap:10px; }
-    button{ width:100%; padding:12px; border-radius:14px; border:0; font-weight:800; cursor:pointer; }
-    button:disabled{ opacity:.5; cursor:not-allowed; }
-    .note{ margin-top:10px; font-size:12px; opacity:.75; line-height:1.35; }
-    .btnRow{ display:grid; grid-template-columns: 1fr 1fr; gap:10px; }
+    body{
+      margin:0;
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
+      background:#fff;
+    }
+
+    .app{
+      max-width:520px;
+      margin:0 auto;
+      padding:12px;
+      display:grid;
+      gap:12px;
+    }
+
+    .card{
+      border:1px solid rgba(0,0,0,.12);
+      border-radius:18px;
+      overflow:hidden;
+      background:#f7f7f7;
+    }
+
+    /* checkerboard look to indicate transparency */
+    canvas{
+      width:100%;
+      height:auto;
+      display:block;
+      background:
+        linear-gradient(45deg,#eee 25%,transparent 25%) 0 0/20px 20px,
+        linear-gradient(-45deg,#eee 25%,transparent 25%) 0 0/20px 20px,
+        linear-gradient(45deg,transparent 75%,#eee 75%) 0 0/20px 20px,
+        linear-gradient(-45deg,transparent 75%,#eee 75%) 0 0/20px 20px;
+    }
+
+    .panel{
+      border:1px solid rgba(0,0,0,.12);
+      border-radius:18px;
+      padding:12px;
+    }
+
+    label{
+      display:block;
+      font-size:13px;
+      font-weight:700;
+      margin:10px 0;
+    }
+
+    textarea{
+      width:100%;
+      box-sizing:border-box;
+      margin-top:6px;
+      padding:10px 12px;
+      border-radius:14px;
+      border:1px solid rgba(0,0,0,.18);
+      font-size:14px;
+      height:170px;
+      resize:vertical;
+    }
+
+    input[type="range"]{
+      width:100%;
+      margin-top:6px;
+    }
+
+    button{
+      width:100%;
+      padding:14px;
+      border-radius:14px;
+      border:0;
+      font-weight:800;
+      cursor:pointer;
+      margin-top:10px;
+    }
+
+    .note{
+      margin-top:10px;
+      font-size:12px;
+      opacity:.75;
+      line-height:1.35;
+    }
   </style>
 </head>
+
 <body>
   <div class="app">
+
     <div class="card">
+      <!-- Fixed 1080×1920 Story overlay canvas -->
       <canvas id="c" width="1080" height="1920"></canvas>
-      <div id="hint" class="hint">Upload a photo or video to start</div>
     </div>
 
     <div class="panel">
       <label>
-        Background (photo or video)
-        <input id="file" type="file" accept="image/*,video/*" />
-      </label>
-
-      <label>
         Lines (one per line — commas also work)
-        <textarea id="lines" spellcheck="false">wake up
+        <textarea id="lines">wake up
 boat
 write
 work
@@ -46,281 +112,146 @@ edit
 sleep</textarea>
       </label>
 
-      <div class="row">
-        <label>
-          Text size
-          <input id="size" type="range" min="40" max="120" value="78" />
-        </label>
-      </div>
+      <label>
+        Text Size
+        <input id="size" type="range" min="40" max="120" value="78" />
+      </label>
 
-      <div class="btnRow">
-        <button id="exportBtn" disabled>Export</button>
-        <button id="exportFrameBtn" disabled>Export Frame (JPEG)</button>
-      </div>
+      <button id="exportBtn">Export Overlay (PNG)</button>
 
-      <div class="note" id="note"></div>
+      <div class="note" id="note">
+        Exports a transparent PNG (1080×1920) ready for Instagram Stories.
+        <br><br>
+        iPhone: Tap Export → Long-press the image → Save to Photos → Add to your IG Story.
+      </div>
     </div>
 
-    <video id="v" playsinline muted loop style="display:none;"></video>
   </div>
 
-  <script>
-    (() => {
-      const W=1080, H=1920;
-      const canvas=document.getElementById("c");
-      const ctx=canvas.getContext("2d");
-      const hint=document.getElementById("hint");
-      const file=document.getElementById("file");
-      const lines=document.getElementById("lines");
-      const size=document.getElementById("size");
-      const exportBtn=document.getElementById("exportBtn");
-      const exportFrameBtn=document.getElementById("exportFrameBtn");
-      const note=document.getElementById("note");
-      const video=document.getElementById("v");
+<script>
+(() => {
+  const W = 1080;
+  const H = 1920;
 
-      const img=new Image();
-      const logo=new Image();
-      logo.src = "./logo.png"; // <-- upload your logo as logo.jpg (or change this filename)
+  const canvas = document.getElementById("c");
+  const ctx = canvas.getContext("2d");
 
-      let mode=null; // "image" | "video"
-      let ready=false;
-      let raf=null;
+  const linesInput = document.getElementById("lines");
+  const sizeInput  = document.getElementById("size");
+  const exportBtn  = document.getElementById("exportBtn");
+  const noteEl     = document.getElementById("note");
 
-      function cover(source, sw, sh){
-        const scale=Math.max(W/sw, H/sh);
-        const cw=W/scale, ch=H/scale;
-        const sx=(sw-cw)/2, sy=(sh-ch)/2;
-        ctx.drawImage(source, sx, sy, cw, ch, 0, 0, W, H);
-      }
+  // Load your logo from the repo root:
+  // Make sure this file exists exactly as: /logo.png
+  const logo = new Image();
+  logo.src = "./logo.png";
+  logo.onerror = () => {
+    console.log("logo.png failed to load. Check the filename + location (repo root).");
+    noteEl.textContent = "⚠️ Couldn't load logo.png. Make sure it's in the repo root (same folder as index.html).";
+  };
 
-      function parseLines(raw){
-        // Handles:
-        // - normal newlines
-        // - pasted comma-separated lists
-        // - Windows CRLF
-        let t = (raw || "").replace(/\r/g, "").trim();
-        if(!t) return [];
+  function parseLines(raw){
+    let t = (raw || "").replace(/\r/g,"").trim();
+    if(!t) return [];
 
-        // If user pasted comma-separated text on one line, convert commas to newlines
-        if(!t.includes("\n") && t.includes(",")) {
-          t = t.split(",").map(s => s.trim()).filter(Boolean).join("\n");
-        }
+    // If they paste a comma-separated list on one line, split it nicely.
+    if(!t.includes("\n") && t.includes(",")){
+      t = t.split(",").map(s => s.trim()).filter(Boolean).join("\n");
+    }
 
-        // Split on newlines (after comma normalization)
-        return t.split("\n").map(s => s.trim()).filter(Boolean);
-      }
+    return t.split("\n").map(s => s.trim()).filter(Boolean);
+  }
 
-      function drawLogo(){
-        if(!logo.complete || !logo.naturalWidth) return;
+  function drawLogo(){
+    if(!logo.complete || !logo.naturalWidth) return;
 
-        // Place logo near top center like your sample.
-        // Scale to ~70% width max.
-        const maxW = W * 0.78;
-        const scale = Math.min(maxW / logo.naturalWidth, 1);
-        const drawW = logo.naturalWidth * scale;
-        const drawH = logo.naturalHeight * scale;
+    // Logo placement like your example: smaller and centered near top
+    const maxW  = W * 0.62; // smaller than before
+    const scale = Math.min(maxW / logo.naturalWidth, 1);
 
-        const x = (W - drawW) / 2;
-        const y = H * 0.09; // tweak if needed
-        ctx.drawImage(logo, x, y, drawW, drawH);
-      }
+    const drawW = logo.naturalWidth  * scale;
+    const drawH = logo.naturalHeight * scale;
 
-      function drawText(){
-        const ls=parseLines(lines.value);
-        const fs=Number(size.value);
+    const x = (W - drawW) / 2;
+    const y = H * 0.065; // higher placement
 
-        // subtle overlay to help white text pop
-        ctx.fillStyle="rgba(0,0,0,0.12)";
-        ctx.fillRect(0,0,W,H);
+    ctx.drawImage(logo, x, y, drawW, drawH);
+  }
 
-        ctx.fillStyle="white";
-        ctx.shadowColor="rgba(0,0,0,0.35)";
-        ctx.shadowBlur=10;
-        ctx.shadowOffsetX=0;
-        ctx.shadowOffsetY=6;
+  function drawText(){
+    const lines = parseLines(linesInput.value);
+    const fontSize = Number(sizeInput.value);
 
-        // Left column list (vertical)
-        ctx.textAlign="left";
-        ctx.font=`900 ${fs}px system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial`;
-        const leftX=W*0.12;
-        const startY=H*0.40;
-        const lh=Math.round(fs*1.05);
+    ctx.fillStyle = "white";
 
-        ls.forEach((line,i)=>ctx.fillText(line,leftX,startY+i*lh));
+    // Soft shadow like your reference
+    ctx.shadowColor = "rgba(0,0,0,0.35)";
+    ctx.shadowBlur = 10;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 6;
 
-        // reset shadow
-        ctx.shadowColor="transparent";
-        ctx.shadowBlur=0;
-        ctx.shadowOffsetX=0;
-        ctx.shadowOffsetY=0;
-      }
+    // Quicksand Bold (700)
+    ctx.textAlign = "left";
+    ctx.font = `700 ${fontSize}px Quicksand, system-ui, -apple-system, Segoe UI, Roboto, Arial`;
 
-      function renderOnce(){
-        ctx.clearRect(0,0,W,H);
-        if(!ready){
-          ctx.fillStyle="#f3f3f3";
-          ctx.fillRect(0,0,W,H);
-          return;
-        }
+    const leftX  = W * 0.12;
+    const startY = H * 0.40;
+    const lh     = Math.round(fontSize * 1.12); // a bit airier for Quicksand
 
-        if(mode==="image"){
-          cover(img, img.width, img.height);
-          drawText();
-          drawLogo();
-        } else if(mode==="video"){
-          if(video.videoWidth && video.videoHeight){
-            cover(video, video.videoWidth, video.videoHeight);
-            drawText();
-            drawLogo();
-          }
-        }
-      }
+    lines.forEach((line, i) => {
+      ctx.fillText(line, leftX, startY + i * lh);
+    });
 
-      function startLoop(){
-        if(raf) cancelAnimationFrame(raf);
-        const tick=()=>{ renderOnce(); raf=requestAnimationFrame(tick); };
-        tick();
-      }
-      function stopLoop(){
-        if(raf) cancelAnimationFrame(raf);
-        raf=null;
-      }
+    // reset shadow
+    ctx.shadowColor = "transparent";
+    ctx.shadowBlur = 0;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 0;
+  }
 
-      function setButtons(){
-        exportBtn.disabled=!ready;
-        exportFrameBtn.disabled=!ready;
+  function render(){
+    // Transparent background overlay
+    ctx.clearRect(0,0,W,H);
+    drawText();
+    drawLogo();
+  }
 
-        if(!ready) return;
+  // Re-render on edits
+  linesInput.addEventListener("input", render);
+  sizeInput.addEventListener("input", render);
+  logo.onload = render;
 
-        if(mode === "image"){
-          exportBtn.textContent = "Export Photo (JPEG)";
-        } else {
-          exportBtn.textContent = "Export Video";
-        }
-      }
+  // Export transparent PNG + iPhone-friendly save flow
+  exportBtn.addEventListener("click", () => {
+    render();
 
-      file.addEventListener("change", async (e) => {
-        const f=e.target.files && e.target.files[0];
-        if(!f) return;
+    const pngUrl = canvas.toDataURL("image/png");
 
-        ready=false;
-        hint.style.display="none";
-        stopLoop();
+    // Open in a new tab so iPhone users can long-press -> Save to Photos
+    const win = window.open();
+    if(win){
+      win.document.write('<meta name="viewport" content="width=device-width,initial-scale=1" />');
+      win.document.write('<img src="'+pngUrl+'" style="width:100%;height:auto;display:block;">');
+      win.document.write('<p style="font-family:system-ui;margin:12px;opacity:.75;line-height:1.35;">Long-press the image → Save to Photos. Then add it on top of your Story.</p>');
+    } else {
+      // If popup blocked, fall back to download
+      const a = document.createElement("a");
+      a.download = "on-rotation-overlay.png";
+      a.href = pngUrl;
+      a.click();
+    }
+  });
 
-        const url=URL.createObjectURL(f);
+  // IMPORTANT: wait for Quicksand to load before first draw (canvas font consistency)
+  async function init(){
+    try {
+      await document.fonts.load('700 80px "Quicksand"');
+    } catch(e){}
+    render();
+  }
 
-        if(f.type.startsWith("image/")){
-          mode="image";
-          video.pause(); video.removeAttribute("src"); video.load();
-
-          img.onload=()=>{
-            ready=true;
-            renderOnce();
-            setButtons();
-            note.textContent="Photo loaded. Export will download a JPEG.";
-            URL.revokeObjectURL(url);
-          };
-          img.src=url;
-
-        } else if(f.type.startsWith("video/")){
-          mode="video";
-          video.onloadeddata=async ()=>{
-            ready=true;
-            try{ await video.play(); }catch(_){}
-            startLoop();
-            setButtons();
-
-            const canRecord = typeof MediaRecorder !== "undefined";
-            note.textContent = canRecord
-              ? "Video loaded. Export Video works in some browsers (usually desktop Chrome). On iPhone Safari, use Export Frame (JPEG) if video export isn’t supported."
-              : "Video loaded. This browser can’t export video. Use Export Frame (JPEG).";
-          };
-          video.src=url;
-          video.load();
-        } else {
-          note.textContent="Unsupported file type.";
-          URL.revokeObjectURL(url);
-        }
-
-        setButtons();
-      });
-
-      // If user edits text, image mode rerenders immediately; video mode rerenders via loop
-      [lines, size].forEach(el=>el.addEventListener("input", ()=>{ if(mode==="image") renderOnce(); }));
-
-      // Export JPEG always works (photo OR current video frame)
-      exportFrameBtn.addEventListener("click", ()=>{
-        if(!ready) return;
-        renderOnce();
-        const a=document.createElement("a");
-        a.download="on-rotation.jpg";
-        a.href=canvas.toDataURL("image/jpeg", 0.92);
-        a.click();
-      });
-
-      // Export action:
-      // - Photo background => JPEG
-      // - Video background => attempt to record canvas stream (webm)
-      exportBtn.addEventListener("click", async ()=>{
-        if(!ready) return;
-
-        if(mode === "image"){
-          renderOnce();
-          const a=document.createElement("a");
-          a.download="on-rotation.jpg";
-          a.href=canvas.toDataURL("image/jpeg", 0.92);
-          a.click();
-          return;
-        }
-
-        // Video export (best-effort)
-        if(typeof MediaRecorder === "undefined"){
-          alert("Video export isn’t supported in this browser. Use Export Frame (JPEG).");
-          return;
-        }
-
-        // Record canvas for a fixed duration (simple + reliable)
-        // If you want “record full video length”, we can add a Start/Stop UI next.
-        const seconds = 5;
-
-        const stream = canvas.captureStream(30);
-        const preferred = [
-          "video/webm;codecs=vp9",
-          "video/webm;codecs=vp8",
-          "video/webm"
-        ];
-        let opts = {};
-        for(const mt of preferred){
-          if(MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(mt)){
-            opts.mimeType = mt;
-            break;
-          }
-        }
-
-        const rec = new MediaRecorder(stream, opts);
-        const chunks = [];
-        rec.ondataavailable = (ev) => { if(ev.data && ev.data.size) chunks.push(ev.data); };
-
-        rec.start();
-        setTimeout(() => rec.stop(), seconds * 1000);
-
-        rec.onstop = () => {
-          const blob = new Blob(chunks, { type: rec.mimeType || "video/webm" });
-          const url = URL.createObjectURL(blob);
-
-          const a=document.createElement("a");
-          a.download="on-rotation.webm";
-          a.href=url;
-          a.click();
-
-          setTimeout(() => URL.revokeObjectURL(url), 5000);
-        };
-      });
-
-      renderOnce();
-      setButtons();
-      note.textContent="Upload a photo/video to begin.";
-    })();
-  </script>
+  init();
+})();
+</script>
 </body>
 </html>
