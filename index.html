@@ -169,9 +169,9 @@ sleep</textarea>
   const canvas = document.getElementById("c");
   const ctx = canvas.getContext("2d");
 
-  const linesInput  = document.getElementById("lines");
-  const sizeInput   = document.getElementById("size");
-  const exportBtn   = document.getElementById("exportBtn");
+  const linesInput   = document.getElementById("lines");
+  const sizeInput    = document.getElementById("size");
+  const exportBtn    = document.getElementById("exportBtn");
   const flavorSelect = document.getElementById("colorSelect");
 
   const logo = new Image();
@@ -231,7 +231,7 @@ sleep</textarea>
     const leftX  = W * 0.12;
     const startY = H * 0.40;
 
-    // Tight spacing (you had 0.85; keep it tight)
+    // Tight spacing
     const lh = Math.round(fontSize * 0.85);
 
     lines.forEach((line, i) => {
@@ -252,16 +252,67 @@ sleep</textarea>
   flavorSelect.addEventListener("change", applyFlavor);
   logo.onload = render;
 
-  // Export transparent PNG and open it for iPhone long-press save
+  // Export transparent PNG + polished preview page (iPhone long-press save)
   exportBtn.addEventListener("click", () => {
     render();
     const pngUrl = canvas.toDataURL("image/png");
 
     const win = window.open();
     if(win){
-      win.document.write('<meta name="viewport" content="width=device-width,initial-scale=1" />');
-      win.document.write('<img src="'+pngUrl+'" style="width:100%;height:auto;display:block;">');
-      win.document.write('<p style="font-family:system-ui;margin:12px;opacity:.75;line-height:1.35;color:#111;">Long-press → Save to Photos</p>');
+      win.document.write(`
+        <!doctype html>
+        <html>
+        <head>
+          <meta name="viewport" content="width=device-width,initial-scale=1" />
+          <title>Overlay Ready</title>
+          <style>
+            body{
+              margin:0;
+              font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
+              background:#1c1c1e;
+              color:#f2f2f7;
+              display:flex;
+              align-items:center;
+              justify-content:center;
+              flex-direction:column;
+              padding:24px;
+              text-align:center;
+            }
+            img{
+              width:100%;
+              max-width:420px;
+              border-radius:18px;
+              margin-bottom:18px;
+              box-shadow:0 10px 40px rgba(0,0,0,.45);
+              background:
+                linear-gradient(45deg,#3a3a3c 25%,transparent 25%) 0 0/20px 20px,
+                linear-gradient(-45deg,#3a3a3c 25%,transparent 25%) 0 0/20px 20px,
+                linear-gradient(45deg,transparent 75%,#3a3a3c 75%) 0 0/20px 20px,
+                linear-gradient(-45deg,transparent 75%,#3a3a3c 75%) 0 0/20px 20px;
+            }
+            h2{
+              margin:0 0 8px;
+              font-size:22px;
+              letter-spacing:0.2px;
+            }
+            p{
+              margin:0;
+              opacity:.75;
+              font-size:15px;
+              line-height:1.45;
+            }
+          </style>
+        </head>
+        <body>
+          <img src="${pngUrl}" alt="On Rotation Overlay" />
+          <h2>Overlay Ready ✨</h2>
+          <p>
+            iPhone: Long-press the image → <b>Save to Photos</b><br><br>
+            Then open Instagram → Story → Add from Photos
+          </p>
+        </body>
+        </html>
+      `);
     } else {
       // Popup blocked: fallback to download
       const a = document.createElement("a");
